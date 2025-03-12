@@ -4,6 +4,7 @@ import os
 import copy
 import glob
 import time
+import sys
 
 import numpy as np
 import nibabel as nib
@@ -11,6 +12,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import torch
+
+# Add parent directory to path so we can import modules from there
+sys.path.append("../")
 
 # from monai.networks.nets.unet import UNet
 from monai.networks.layers.factories import Act, Norm

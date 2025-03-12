@@ -19,13 +19,9 @@ import torch.nn as nn
 from monai.networks.blocks.convolutions import Convolution, ResidualUnit
 from monai.networks.layers.factories import Act, Norm
 from monai.networks.layers.simplelayers import SkipConnection
-from monai.utils import alias, deprecated_arg, export
 
 __all__ = ["UNet_MDO"]
 
-
-@export("monai.networks.nets")
-@alias("UNet_MDO")
 
 class UNet_MDO(nn.Module):
     """
@@ -72,6 +68,9 @@ class UNet_MDO(nn.Module):
             if a conv layer is directly followed by a batch norm layer, bias should be False.
         adn_ordering: a string representing the ordering of activation (A), normalization (N), and dropout (D).
             Defaults to "NDA". See also: :py:class:`monai.networks.blocks.ADN`.
+        dimensions: number of spatial dimensions. This argument is deprecated, use `spatial_dims` instead.
+        macro_dropout: sequence of dropout probabilities for each macro block.
+            If None, no dropout is applied.
 
     Examples::
 
@@ -96,9 +95,6 @@ class UNet_MDO(nn.Module):
             strides=(2, 2, 2, 2),
         )
 
-    .. deprecated:: 0.6.0
-        ``dimensions`` is deprecated, use ``spatial_dims`` instead.
-
     Note: The acceptable spatial size of input data depends on the parameters of the network,
         to set appropriate spatial size, please check the tutorial for more details:
         https://github.com/Project-MONAI/tutorials/blob/master/modules/UNet_input_size_constrains.ipynb.
@@ -109,9 +105,6 @@ class UNet_MDO(nn.Module):
 
     """
 
-    @deprecated_arg(
-        name="dimensions", new_name="spatial_dims", since="0.6", msg_suffix="Please use `spatial_dims` instead."
-    )
     def __init__(
         self,
         spatial_dims: int,
@@ -130,8 +123,47 @@ class UNet_MDO(nn.Module):
         dimensions: Optional[int] = None,
         macro_dropout: Sequence[int] = None,
     ) -> None:
+        """
+        Args:
+            spatial_dims: number of spatial dimensions.
+            in_channels: number of input channels.
+            out_channels: number of output channels.
+            channels: sequence of channels. Top block first. The length of `channels` should be no less than 2.
+            strides: sequence of convolution strides. The length of `stride` should equal to `len(channels) - 1`.
+            kernel_size: convolution kernel size, the value(s) should be odd. If sequence,
+                its length should equal to dimensions.
+            up_kernel_size: upsampling convolution kernel size, the value(s) should be odd. If sequence,
+                its length should equal to dimensions.
+            num_res_units: number of residual units. 0 indicates no residual units.
+            act: activation type and arguments.
+            norm: feature normalization type and arguments.
+            dropout: dropout ratio. Defaults to no dropout.
+            bias: whether to have a bias term in convolution blocks. Defaults to True.
+                According to `Performance Tuning Guide <https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html>`_,
+                if a conv layer is directly followed by a batch norm layer, bias should be False.
+            adn_ordering: a string representing the ordering of activation (A), normalization (N), and dropout (D).
+                Defaults to "NDA".
+            dimensions: number of spatial dimensions. This argument is deprecated, use `spatial_dims` instead.
+            macro_dropout: sequence of dropout probabilities for each macro block.
+                If None, no dropout is applied.
 
+        Note: The acceptable spatial size of input data depends on the parameters of the network,
+            to set appropriate spatial size, please check the tutorial for more details:
+            https://github.com/Project-MONAI/tutorials/blob/master/modules/UNet_input_size_constrains.ipynb.
+            Typically, when using a stride of 2 in down / up sampling, the output dimensions are either half of the
+            input dimensions (downsampling) or twice the input dimensions (upsampling).
+
+        """
         super().__init__()
+        
+        # Handle deprecated 'dimensions' parameter
+        if dimensions is not None:
+            spatial_dims = dimensions
+            warnings.warn(
+                "The `dimensions` parameter is deprecated. Use `spatial_dims` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         if len(channels) < 2:
             raise ValueError("the length of `channels` should be no less than 2.")
@@ -140,8 +172,6 @@ class UNet_MDO(nn.Module):
             raise ValueError("the length of `strides` should equal to `len(channels) - 1`.")
         if delta > 0:
             warnings.warn(f"`len(strides) > len(channels) - 1`, the last {delta} values of strides will not be used.")
-        if dimensions is not None:
-            spatial_dims = dimensions
         if isinstance(kernel_size, Sequence):
             if len(kernel_size) != spatial_dims:
                 raise ValueError("the length of `kernel_size` should equal to `dimensions`.")
