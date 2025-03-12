@@ -22,7 +22,7 @@ from monai.inferers import sliding_window_inference
 from scipy.stats import zscore
 # import bnn
 
-from model import UNet_MDO as UNet
+from model import UNet_Theseus as UNet
 from utils import iter_all_order
 
 
