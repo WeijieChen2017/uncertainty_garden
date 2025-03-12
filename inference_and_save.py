@@ -22,7 +22,8 @@ from monai.inferers import sliding_window_inference
 from scipy.stats import zscore
 # import bnn
 
-from model import UNet_Theseus as UNet
+# Import the model class from the model package
+from model import UNet_Theseus
 from utils import iter_all_order
 
 
