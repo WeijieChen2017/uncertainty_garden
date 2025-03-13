@@ -94,7 +94,7 @@ np.random.seed(test_dict["seed"])
 gpu_list = ','.join(str(x) for x in test_dict["gpu_ids"])
 os.environ['CUDA_VISIBLE_DEVICES'] = gpu_list
 print('export CUDA_VISIBLE_DEVICES=' + gpu_list)
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device(f'cuda:{gpu_id}' if torch.cuda.is_available() else 'cpu')
 
 model_list = sorted(glob.glob(os.path.join(test_dict["save_folder"], "model_best_*.pth")))
 if "curr" in model_list[-1]:
