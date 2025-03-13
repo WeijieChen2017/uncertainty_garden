@@ -81,10 +81,9 @@ print("input size:", test_dict["input_size"])
 print("alt_blk_depth", test_dict["alt_blk_depth"])
 
 
-
+# Create all necessary directories
 for path in [test_dict["save_folder"], test_dict["save_folder"]+test_dict["eval_save_folder"]]:
-    if not os.path.exists(path):
-        os.mkdir(path)
+    os.makedirs(path, exist_ok=True)
 
 np.save(test_dict["save_folder"]+"test_dict.npy", test_dict)
 
@@ -187,6 +186,8 @@ for cnt_file, file_path in enumerate(file_list):
             output_array[idx_es, :, :, :] = y_hat.cpu().detach().numpy()[:, :, 96:-96, 96:-96, 96:-96]
 
     # Save the original output_array as a .npy file
-    output_array_save_name = train_dict["save_folder"]+test_dict["eval_save_folder"]+"/"+file_name.replace(".nii.gz", test_dict["save_tag"]+"_array.npy")
+    output_array_save_dir = train_dict["save_folder"]+test_dict["eval_save_folder"]
+    os.makedirs(output_array_save_dir, exist_ok=True)  # Ensure directory exists
+    output_array_save_name = output_array_save_dir+"/"+file_name.replace(".nii.gz", test_dict["save_tag"]+"_array.npy")
     np.save(output_array_save_name, output_array)
     print(f"Saved output array to: {output_array_save_name}")
