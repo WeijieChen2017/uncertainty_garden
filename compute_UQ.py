@@ -16,7 +16,7 @@ print(f"Using model: {model_name}")
 # Setup dictionaries
 test_dict = {}
 test_dict["project_name"] = model_name
-test_dict["save_folder"] = "../project_dir/"+test_dict["project_name"]+"/"
+test_dict["save_folder"] = "project_dir/"+test_dict["project_name"]+"/"
 test_dict["eval_save_folder"] = "array"
 
 # Load train_dict to get necessary parameters
@@ -29,14 +29,16 @@ data_div = np.load(os.path.join(test_dict["save_folder"], "data_division.npy"), 
 
 # Get test data list
 test_list = data_div['test_list_X']
-# Remove "../" prefix from paths
+# Remove "../" prefix from paths and ensure correct path format
 test_list = [path.replace("../", "") for path in test_list]
+test_list = ["./"+path if not path.startswith("./") else path for path in test_list]
 test_list.sort()  # Sort the test list
 
 # Get validation data list if available
 val_list = []
 if 'val_list_X' in data_div:
     val_list = [path.replace("../", "") for path in data_div['val_list_X']]
+    val_list = ["./"+path if not path.startswith("./") else path for path in val_list]
     val_list.sort()  # Sort the validation list
 
 # ==================== Output all files found ====================
