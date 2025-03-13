@@ -16,7 +16,7 @@ print(f"Using model: {model_name}")
 # Setup dictionaries
 test_dict = {}
 test_dict["project_name"] = model_name
-test_dict["save_folder"] = "project_dir/"+test_dict["project_name"]+"/"
+test_dict["save_folder"] = "../project_dir/"+test_dict["project_name"]+"/"
 test_dict["eval_save_folder"] = "array"
 
 # Load train_dict to get necessary parameters
