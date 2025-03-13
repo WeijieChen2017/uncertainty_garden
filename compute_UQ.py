@@ -11,7 +11,7 @@ from uncertain_quantification import (
     variance, standard_deviation, coefficient_of_variation, 
     entropy, interquartile_range, range_width, 
     confidence_interval_width, predictive_variance, 
-    mutual_information, calculate_all_metrics
+    mutual_information
 )
 
 # Remove the parent directory path append
@@ -45,6 +45,36 @@ def denormalize(data, min_val=-1024, max_val=2976, norm_range=[0, 1]):
     actual_range_width = max_val - min_val
     
     return ((data - norm_min) / norm_range_width) * actual_range_width + min_val
+
+# Define a function to process and save a single metric
+def process_and_save_metric(metric_func, metric_name, data, affine, header, output_path, prefix):
+    """Process a single uncertainty metric and save it as a NIFTI file"""
+    print(f"\n{'='*20} Processing {metric_name} {'='*20}")
+    
+    # Calculate the metric
+    print(f"Calculating {metric_name}...")
+    start_time = np.datetime64('now')
+    metric_data = metric_func(data, voxel_wise=True)
+    end_time = np.datetime64('now')
+    
+    # Print metric statistics
+    print(f"Completed in {(end_time - start_time) / np.timedelta64(1, 's'):.2f} seconds")
+    print(f"{metric_name} statistics:")
+    print(f"  Min: {np.min(metric_data):.6f}")
+    print(f"  Max: {np.max(metric_data):.6f}")
+    print(f"  Mean: {np.mean(metric_data):.6f}")
+    print(f"  Std: {np.std(metric_data):.6f}")
+    
+    # Create output filename
+    output_filename = os.path.join(output_path, f"{prefix}_{metric_name}.nii.gz")
+    
+    # Create and save nifti file
+    print(f"Saving {metric_name} to {output_filename}...")
+    metric_nifti = nib.Nifti1Image(metric_data, affine, header)
+    nib.save(metric_nifti, output_filename)
+    print(f"Successfully saved {metric_name}")
+    
+    return metric_data
 
 # ==================== data division ====================
 
@@ -104,22 +134,67 @@ if len(val_list) > 0:
         header = original_nifti.header
         affine = original_nifti.affine
         
-        # Calculate all uncertainty metrics
-        print("Calculating uncertainty metrics...")
-        metrics = calculate_all_metrics(denormalized_array, voxel_wise=True)
+        # Create output prefix
+        output_prefix = f"val_{os.path.basename(file_path).replace('.nii.gz', '')}"
         
-        # Save each metric as a nifti file
-        for metric_name, metric_data in metrics.items():
-            # Create output filename
-            output_filename = os.path.join(
-                uncertainty_save_path,
-                f"val_{os.path.basename(file_path).replace('.nii.gz', '')}_{metric_name}.nii.gz"
-            )
-            
-            # Create and save nifti file
-            metric_nifti = nib.Nifti1Image(metric_data, affine, header)
-            nib.save(metric_nifti, output_filename)
-            print(f"Saved {metric_name} to {output_filename}")
+        # Process each metric one by one
+        print("\nProcessing uncertainty metrics one by one...")
+        
+        # Variance
+        process_and_save_metric(
+            variance, "variance", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Standard Deviation
+        process_and_save_metric(
+            standard_deviation, "std", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Coefficient of Variation
+        process_and_save_metric(
+            coefficient_of_variation, "cv", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Entropy
+        process_and_save_metric(
+            entropy, "entropy", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Interquartile Range
+        process_and_save_metric(
+            interquartile_range, "iqr", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Range Width
+        process_and_save_metric(
+            range_width, "range", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Confidence Interval Width
+        process_and_save_metric(
+            confidence_interval_width, "ci_width", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Predictive Variance
+        process_and_save_metric(
+            predictive_variance, "pred_var", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Mutual Information
+        process_and_save_metric(
+            mutual_information, "mutual_info", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        print("\nCompleted processing all metrics for validation file")
     else:
         print(f"Warning: No predictions found for {file_path}")
 
@@ -153,21 +228,66 @@ if len(test_list) > 0:
         header = original_nifti.header
         affine = original_nifti.affine
         
-        # Calculate all uncertainty metrics
-        print("Calculating uncertainty metrics...")
-        metrics = calculate_all_metrics(denormalized_array, voxel_wise=True)
+        # Create output prefix
+        output_prefix = f"test_{os.path.basename(file_path).replace('.nii.gz', '')}"
         
-        # Save each metric as a nifti file
-        for metric_name, metric_data in metrics.items():
-            # Create output filename
-            output_filename = os.path.join(
-                uncertainty_save_path,
-                f"test_{os.path.basename(file_path).replace('.nii.gz', '')}_{metric_name}.nii.gz"
-            )
-            
-            # Create and save nifti file
-            metric_nifti = nib.Nifti1Image(metric_data, affine, header)
-            nib.save(metric_nifti, output_filename)
-            print(f"Saved {metric_name} to {output_filename}")
+        # Process each metric one by one
+        print("\nProcessing uncertainty metrics one by one...")
+        
+        # Variance
+        process_and_save_metric(
+            variance, "variance", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Standard Deviation
+        process_and_save_metric(
+            standard_deviation, "std", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Coefficient of Variation
+        process_and_save_metric(
+            coefficient_of_variation, "cv", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Entropy
+        process_and_save_metric(
+            entropy, "entropy", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Interquartile Range
+        process_and_save_metric(
+            interquartile_range, "iqr", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Range Width
+        process_and_save_metric(
+            range_width, "range", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Confidence Interval Width
+        process_and_save_metric(
+            confidence_interval_width, "ci_width", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Predictive Variance
+        process_and_save_metric(
+            predictive_variance, "pred_var", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        # Mutual Information
+        process_and_save_metric(
+            mutual_information, "mutual_info", denormalized_array, 
+            affine, header, uncertainty_save_path, output_prefix
+        )
+        
+        print("\nCompleted processing all metrics for test file")
     else:
         print(f"Warning: No predictions found for {file_path}")
