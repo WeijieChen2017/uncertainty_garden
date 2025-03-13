@@ -38,7 +38,7 @@ max_val = 2976
 norm_range = [-1, 1]
 
 # Function to denormalize data from [-1, 1] to [min_val, max_val]
-def denormalize(data, min_val=-1024, max_val=2976, norm_range=[-1, 1]):
+def denormalize(data, min_val=-1024, max_val=2976, norm_range=[0, 1]):
     """Denormalize data from norm_range to [min_val, max_val]"""
     norm_min, norm_max = norm_range
     norm_range_width = norm_max - norm_min
