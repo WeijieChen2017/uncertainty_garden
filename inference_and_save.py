@@ -57,7 +57,10 @@ if dataset_part < 0 or dataset_part > 4:
     dataset_part = 0
 
 # Map dataset part to GPU ID
-gpu_mapping = {0: 0, 1: 1, 2: 2, 3: 6, 4: 7}
+# th1 and th4 completed
+# we do it in 0, 5, 6, while the data is 1, 2, 4
+# gpu_mapping = {0: 0, 1: 1, 2: 2, 3: 6, 4: 7}
+gpu_mapping = {0: 0, 1: 0, 2: 5, 3: 6, 4: 6}
 gpu_id = gpu_mapping[dataset_part]
 test_dict["gpu_ids"] = [gpu_id]
 print(f"Using GPU ID: {gpu_id}")
