@@ -148,6 +148,15 @@ for cnt_file, file_path in enumerate(file_list):
     x_path = file_path
     y_path = file_path.replace("x", "y")
     file_name = os.path.basename(file_path)
+    
+    # Check if output file already exists
+    output_array_save_dir = train_dict["save_folder"]+test_dict["eval_save_folder"]
+    output_array_save_name = output_array_save_dir+"/"+file_name.replace(".nii.gz", test_dict["save_tag"]+"_array.npy")
+    
+    if os.path.exists(output_array_save_name):
+        print(iter_tag + " ===> Case[{:03d}/{:03d}]: ".format(cnt_file+1, cnt_total_file), x_path, "<--- SKIPPED (file exists)")
+        continue
+    
     print(iter_tag + " ===> Case[{:03d}/{:03d}]: ".format(cnt_file+1, cnt_total_file), x_path, "<---", end="") # 
     x_file = nib.load(x_path)
     y_file = nib.load(y_path)
@@ -186,8 +195,6 @@ for cnt_file, file_path in enumerate(file_list):
             output_array[idx_es, :, :, :] = y_hat.cpu().detach().numpy()[:, :, 96:-96, 96:-96, 96:-96]
 
     # Save the original output_array as a .npy file
-    output_array_save_dir = train_dict["save_folder"]+test_dict["eval_save_folder"]
     os.makedirs(output_array_save_dir, exist_ok=True)  # Ensure directory exists
-    output_array_save_name = output_array_save_dir+"/"+file_name.replace(".nii.gz", test_dict["save_tag"]+"_array.npy")
     np.save(output_array_save_name, output_array)
     print(f"Saved output array to: {output_array_save_name}")
