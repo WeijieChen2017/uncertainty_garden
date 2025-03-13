@@ -77,7 +77,7 @@ print("="*50 + "\n")
 # ==================== Process first validation file ====================
 if len(val_list) > 0:
     print("\nProcessing first validation file...")
-    file_path = val_list[0]
+    file_path = "../"+val_list[0]
     print(f"Processing validation file: {file_path}")
     
     # Get corresponding output array path
@@ -126,7 +126,7 @@ if len(val_list) > 0:
 # ==================== Process first test file ====================
 if len(test_list) > 0:
     print("\nProcessing first test file...")
-    file_path = test_list[0]
+    file_path = "../"+test_list[0]
     print(f"Processing test file: {file_path}")
     
     # Get corresponding output array path
