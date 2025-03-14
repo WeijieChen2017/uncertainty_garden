@@ -5,6 +5,8 @@ import os
 import numpy as np
 import nibabel as nib
 # import torch
+import multiprocessing as mp
+from tqdm import tqdm
 
 # Import the uncertainty quantification functions
 from uncertain_quantification import (
@@ -49,245 +51,131 @@ def denormalize(data, min_val=-1024, max_val=2976, norm_range=[0, 1]):
 # Define a function to process and save a single metric
 def process_and_save_metric(metric_func, metric_name, data, affine, header, output_path, prefix):
     """Process a single uncertainty metric and save it as a NIFTI file"""
-    print(f"\n{'='*20} Processing {metric_name} {'='*20}")
-    
-    # Calculate the metric
-    print(f"Calculating {metric_name}...")
-    start_time = np.datetime64('now')
-    metric_data = metric_func(data, voxel_wise=True)
-    end_time = np.datetime64('now')
-    
-    # Print metric statistics
-    print(f"Completed in {(end_time - start_time) / np.timedelta64(1, 's'):.2f} seconds")
-    print(f"{metric_name} statistics:")
-    print(f"  Min: {np.min(metric_data):.6f}")
-    print(f"  Max: {np.max(metric_data):.6f}")
-    print(f"  Mean: {np.mean(metric_data):.6f}")
-    print(f"  Std: {np.std(metric_data):.6f}")
-    
-    # Create output filename
-    output_filename = os.path.join(output_path, f"{prefix}_{metric_name}.nii.gz")
-    
-    # Create and save nifti file
-    print(f"Saving {metric_name} to {output_filename}...")
-    metric_nifti = nib.Nifti1Image(metric_data, affine, header)
-    nib.save(metric_nifti, output_filename)
-    print(f"Successfully saved {metric_name}")
-    
-    return metric_data
-
-# ==================== data division ====================
-
-# Load data division - keep this path independent
-data_div = np.load(os.path.join(test_dict["save_folder"], "data_division.npy"), allow_pickle=True)[()]
-
-# Get test data list - original paths from data_div
-test_list = data_div['test_list_X']
-# Sort the test list
-test_list.sort()
-
-# Get validation data list if available - original paths from data_div
-val_list = []
-if 'val_list_X' in data_div:
-    val_list = data_div['val_list_X']
-    val_list.sort()  # Sort the validation list
-
-# ==================== Output all files found ====================
-print("\n" + "="*50)
-print(f"Found {len(test_list)} test files:")
-for i, file_path in enumerate(test_list):
-    print(f"  Test [{i+1}/{len(test_list)}]: {file_path}")
-
-print("\n" + "="*50)
-print(f"Found {len(val_list)} validation files:")
-for i, file_path in enumerate(val_list):
-    print(f"  Val [{i+1}/{len(val_list)}]: {file_path}")
-print("="*50 + "\n")
-
-# ==================== Process first validation file ====================
-if len(val_list) > 0:
-    print("\nProcessing first validation file...")
-    file_path = "../"+val_list[0]
-    print(f"Processing validation file: {file_path}")
-    
-    # Get corresponding output array path
-    output_array_path = os.path.join(
-        test_dict["save_folder"],
-        test_dict["eval_save_folder"],
-        os.path.basename(file_path).replace(".nii.gz", "_array.npy")
-    )
-    
-    # Check if the output array exists
-    if os.path.exists(output_array_path):
-        print(f"Found saved predictions at: {output_array_path}")
+    try:
+        # Calculate the metric
+        metric_data = metric_func(data, voxel_wise=True)
         
-        # Load the predictions
+        # Create output filename
+        output_filename = os.path.join(output_path, f"{prefix}_{metric_name}.nii.gz")
+        
+        # Create and save nifti file
+        metric_nifti = nib.Nifti1Image(metric_data, affine, header)
+        nib.save(metric_nifti, output_filename)
+        
+        return True
+    except Exception as e:
+        print(f"Error processing {metric_name}: {str(e)}")
+        return False
+
+def process_single_file(file_path, test_dict):
+    """Process a single file with all uncertainty metrics"""
+    try:
+        # Skip if file already processed
+        output_array_path = os.path.join(
+            test_dict["save_folder"],
+            test_dict["eval_save_folder"],
+            os.path.basename(file_path).replace(".nii.gz", "_array.npy")
+        )
+        
+        if not os.path.exists(output_array_path):
+            print(f"Warning: No predictions found for {file_path}")
+            return False
+            
+        # Load and process the file
         output_array = np.load(output_array_path)
-        print(f"Loaded array shape: {output_array.shape}")
-        
-        # Denormalize the data from [-1, 1] to [-1024, 2976]
         denormalized_array = denormalize(output_array, min_val, max_val, norm_range)
-        print(f"Denormalized array range: [{np.min(denormalized_array)}, {np.max(denormalized_array)}]")
         
-        # Load the original nifti file to get header and affine
+        # Load original file for header and affine
         original_nifti = nib.load(file_path)
         header = original_nifti.header
         affine = original_nifti.affine
         
         # Create output prefix
-        output_prefix = f"val_{os.path.basename(file_path).replace('.nii.gz', '')}"
+        is_val = "val_list_X" in file_path
+        prefix = f"{'val' if is_val else 'test'}_{os.path.basename(file_path).replace('.nii.gz', '')}"
         
-        # Process each metric one by one
-        print("\nProcessing uncertainty metrics one by one...")
+        # Process all metrics
+        metrics = [
+            (variance, "variance"),
+            (standard_deviation, "std"),
+            (coefficient_of_variation, "cv"),
+            (entropy, "entropy"),
+            (interquartile_range, "iqr"),
+            (range_width, "range"),
+            (confidence_interval_width, "ci_width"),
+            (predictive_variance, "pred_var"),
+            (mutual_information, "mutual_info")
+        ]
         
-        # Variance
-        process_and_save_metric(
-            variance, "variance", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Standard Deviation
-        process_and_save_metric(
-            standard_deviation, "std", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Coefficient of Variation
-        process_and_save_metric(
-            coefficient_of_variation, "cv", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Entropy
-        process_and_save_metric(
-            entropy, "entropy", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Interquartile Range
-        process_and_save_metric(
-            interquartile_range, "iqr", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Range Width
-        process_and_save_metric(
-            range_width, "range", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Confidence Interval Width
-        process_and_save_metric(
-            confidence_interval_width, "ci_width", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Predictive Variance
-        process_and_save_metric(
-            predictive_variance, "pred_var", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Mutual Information
-        process_and_save_metric(
-            mutual_information, "mutual_info", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        print("\nCompleted processing all metrics for validation file")
-    else:
-        print(f"Warning: No predictions found for {file_path}")
+        for metric_func, metric_name in metrics:
+            process_and_save_metric(
+                metric_func, metric_name, denormalized_array,
+                affine, header, uncertainty_save_path, prefix
+            )
+            
+        return True
+    except Exception as e:
+        print(f"Error processing file {file_path}: {str(e)}")
+        return False
 
-# ==================== Process first test file ====================
-if len(test_list) > 0:
-    print("\nProcessing first test file...")
-    file_path = "../"+test_list[0]
-    print(f"Processing test file: {file_path}")
+def process_file_batch(file_batch):
+    """Process a batch of files (for multiprocessing)"""
+    results = []
+    for file_path in file_batch:
+        result = process_single_file(file_path, test_dict)
+        results.append((file_path, result))
+    return results
+
+if __name__ == "__main__":
+    # Load data division
+    data_div = np.load(os.path.join(test_dict["save_folder"], "data_division.npy"), allow_pickle=True)[()]
     
-    # Get corresponding output array path
-    output_array_path = os.path.join(
-        test_dict["save_folder"],
-        test_dict["eval_save_folder"],
-        os.path.basename(file_path).replace(".nii.gz", "_array.npy")
-    )
+    # Get all files to process
+    all_files = []
     
-    # Check if the output array exists
-    if os.path.exists(output_array_path):
-        print(f"Found saved predictions at: {output_array_path}")
-        
-        # Load the predictions
-        output_array = np.load(output_array_path)
-        print(f"Loaded array shape: {output_array.shape}")
-        
-        # Denormalize the data from [-1, 1] to [-1024, 2976]
-        denormalized_array = denormalize(output_array, min_val, max_val, norm_range)
-        print(f"Denormalized array range: [{np.min(denormalized_array)}, {np.max(denormalized_array)}]")
-        
-        # Load the original nifti file to get header and affine
-        original_nifti = nib.load(file_path)
-        header = original_nifti.header
-        affine = original_nifti.affine
-        
-        # Create output prefix
-        output_prefix = f"test_{os.path.basename(file_path).replace('.nii.gz', '')}"
-        
-        # Process each metric one by one
-        print("\nProcessing uncertainty metrics one by one...")
-        
-        # Variance
-        process_and_save_metric(
-            variance, "variance", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Standard Deviation
-        process_and_save_metric(
-            standard_deviation, "std", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Coefficient of Variation
-        process_and_save_metric(
-            coefficient_of_variation, "cv", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Entropy
-        process_and_save_metric(
-            entropy, "entropy", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Interquartile Range
-        process_and_save_metric(
-            interquartile_range, "iqr", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Range Width
-        process_and_save_metric(
-            range_width, "range", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Confidence Interval Width
-        process_and_save_metric(
-            confidence_interval_width, "ci_width", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Predictive Variance
-        process_and_save_metric(
-            predictive_variance, "pred_var", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        # Mutual Information
-        process_and_save_metric(
-            mutual_information, "mutual_info", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
-        
-        print("\nCompleted processing all metrics for test file")
-    else:
-        print(f"Warning: No predictions found for {file_path}")
+    # Add test files
+    test_list = data_div['test_list_X']
+    test_list.sort()
+    all_files.extend(["../" + path if not path.startswith("../") else path for path in test_list])
+    
+    # Add validation files if available
+    if 'val_list_X' in data_div:
+        val_list = data_div['val_list_X']
+        val_list.sort()
+        all_files.extend(["../" + path if not path.startswith("../") else path for path in val_list])
+    
+    print(f"\nTotal files to process: {len(all_files)}")
+    
+    # Split files into batches for multiprocessing
+    num_processes = 32
+    batch_size = len(all_files) // num_processes
+    if len(all_files) % num_processes:
+        batch_size += 1
+    
+    file_batches = [all_files[i:i + batch_size] for i in range(0, len(all_files), batch_size)]
+    
+    print(f"Split into {len(file_batches)} batches of approximately {batch_size} files each")
+    
+    # Process files using multiprocessing
+    print("\nStarting multiprocessing pool with", num_processes, "processes")
+    with mp.Pool(processes=num_processes) as pool:
+        results = list(tqdm(
+            pool.imap(process_file_batch, file_batches),
+            total=len(file_batches),
+            desc="Processing batches"
+        ))
+    
+    # Flatten results and count successes/failures
+    all_results = [item for sublist in results for item in sublist]
+    successes = sum(1 for _, success in all_results if success)
+    failures = sum(1 for _, success in all_results if not success)
+    
+    print("\nProcessing complete!")
+    print(f"Successfully processed: {successes} files")
+    print(f"Failed to process: {failures} files")
+    
+    if failures > 0:
+        print("\nFailed files:")
+        for file_path, success in all_results:
+            if not success:
+                print(f"- {file_path}")
