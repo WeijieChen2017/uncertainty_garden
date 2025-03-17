@@ -44,24 +44,13 @@ name = model_list[current_model_idx]
 
 # for name in model_list:
 test_dict = {}
-test_dict = {}
 test_dict["time_stamp"] = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
 test_dict["project_name"] = name # "Bayesian_MTGD_v2_unet_do10_MTGD15"
 test_dict["save_folder"] = "../project_dir/"+test_dict["project_name"]+"/"
 
-# Ask user for which part of the dataset to process (0-4 for 5 parts)
-print("Dataset part to process (0-4): ", end="")
-dataset_part = int(input())
-if dataset_part < 0 or dataset_part > 4:
-    print("Invalid dataset part. Using part 0.")
-    dataset_part = 0
-
-# Map dataset part to GPU ID
-# th1 and th4 completed
-# we do it in 0, 5, 6, while the data is 1, 2, 4
-# gpu_mapping = {0: 0, 1: 1, 2: 2, 3: 6, 4: 7}
-gpu_mapping = {0: 0, 1: 0, 2: 5, 3: 6, 4: 6}
-gpu_id = gpu_mapping[dataset_part]
+# Ask user for GPU ID
+print("Select GPU index to use: ", end="")
+gpu_id = int(input())
 test_dict["gpu_ids"] = [gpu_id]
 print(f"Using GPU ID: {gpu_id}")
 
@@ -124,30 +113,19 @@ if 'val_list_X' in data_div:
     X_list.extend(val_list)
     print(f"Added {len(data_div['val_list_X'])} validation files to the list.")
 
-# Divide the dataset into 5 parts
-total_files = len(X_list)
 X_list.sort()  # Sort the list first
-
-# Process files with index % 5 == dataset_part
-file_list = []
-for i, file_path in enumerate(X_list):
-    if i % 5 == dataset_part:
-        file_list.append(file_path)
-
-print(f"Processing part {dataset_part} of the dataset: {len(file_list)} files with indices mod 5 = {dataset_part}")
 
 # Define the list of cases to process
 to_do_cases = ["00008"]  # Add more case numbers as needed
 print(f"Will process only files containing these case numbers: {to_do_cases}")
 
 # Filter file_list to only include files containing the specified case numbers
-filtered_file_list = []
-for file_path in file_list:
+file_list = []
+for file_path in X_list:
     file_name = os.path.basename(file_path)
     if any(case in file_name for case in to_do_cases):
-        filtered_file_list.append(file_path)
+        file_list.append(file_path)
 
-file_list = filtered_file_list
 print(f"Found {len(file_list)} files matching the specified cases")
 
 if test_dict["eval_file_cnt"] > 0:
