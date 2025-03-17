@@ -177,9 +177,9 @@ else:
     # Create mask using threshold, dilation, erosion, and z-slice binary fill holes
     print(f"Creating mask using threshold {mask_threshold} with dilation and erosion...")
     
-    # Initial threshold
-    initial_mask = median_prediction > mask_threshold
-    print(f"Initial thresholding - Number of voxels: {np.sum(initial_mask)}")
+    # Initial threshold using ground truth instead of median prediction
+    initial_mask = ground_truth > mask_threshold
+    print(f"Initial thresholding on ground truth - Number of voxels: {np.sum(initial_mask)}")
     
     # Dilate the mask
     dilated_mask = binary_dilation(initial_mask, iterations=dilation_iterations)
