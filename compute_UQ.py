@@ -11,7 +11,7 @@ from uncertain_quantification import (
     variance, standard_deviation, coefficient_of_variation, 
     entropy, interquartile_range, range_width, 
     confidence_interval_width, predictive_variance, 
-    mutual_information
+    # mutual_information
 )
 
 # Remove the parent directory path append
@@ -197,10 +197,10 @@ if len(val_list) > 0:
         )
         
         # Mutual Information
-        process_and_save_metric(
-            mutual_information, "mutual_info", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
+        # process_and_save_metric(
+        #     mutual_information, "mutual_info", denormalized_array, 
+        #     affine, header, uncertainty_save_path, output_prefix
+        # )
         
         print("\nCompleted processing all metrics for validation file")
     else:
@@ -291,10 +291,10 @@ if len(test_list) > 0:
         )
         
         # Mutual Information
-        process_and_save_metric(
-            mutual_information, "mutual_info", denormalized_array, 
-            affine, header, uncertainty_save_path, output_prefix
-        )
+        # process_and_save_metric(
+        #     mutual_information, "mutual_info", denormalized_array, 
+        #     affine, header, uncertainty_save_path, output_prefix
+        # )
         
         print("\nCompleted processing all metrics for test file")
     else:
