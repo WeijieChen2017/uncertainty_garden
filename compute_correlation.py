@@ -7,7 +7,7 @@ from scipy.ndimage import binary_fill_holes, binary_dilation, binary_erosion
 import csv
 
 # Flag to control whether to overwrite existing files
-OVERWRITE = False  # Set to True to force recomputation and overwrite existing files
+OVERWRITE = True  # Set to True to force recomputation and overwrite existing files
 
 # Paths - using absolute paths as specified in the user query
 ground_truth_path = "/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty_garden/project_dir/Theseus_v2_181_200_rdp1/ground_truth/00008_yte.nii.gz"
