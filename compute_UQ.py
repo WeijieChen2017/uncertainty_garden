@@ -22,7 +22,7 @@ model_name = "Theseus_v2_181_200_rdp1"
 print(f"Using model: {model_name}")
 
 # Define the list of cases to process
-to_do_cases = ["00008"]  # Add more case numbers as needed
+to_do_cases = ["00219"]  # Add more case numbers as needed
 print(f"Will process only files containing these case numbers: {to_do_cases}")
 
 # Setup dictionaries
