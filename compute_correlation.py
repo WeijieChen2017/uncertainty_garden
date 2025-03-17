@@ -7,8 +7,8 @@ from scipy.ndimage import binary_fill_holes
 import csv
 
 # Paths - using absolute paths as specified in the user query
-ground_truth_path = "/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty_garden/project_dir/Theseus_v2_181_200_rdp1/ground_truth/00219_yte.nii.gz"
-prediction_path = "/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty_garden/project_dir/Theseus_v2_181_200_rdp1/array/00219_xte_array.npy"
+ground_truth_path = "/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty_garden/project_dir/Theseus_v2_181_200_rdp1/ground_truth/00008_yte.nii.gz"
+prediction_path = "/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty_garden/project_dir/Theseus_v2_181_200_rdp1/array/00008_xte_array.npy"
 uncertainty_path = "/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty_garden/project_dir/Theseus_v2_181_200_rdp1/uncertainty"
 
 # Ensure results directory exists
@@ -46,126 +46,181 @@ def normalize_metric(data):
     return (data - min_data) / (max_data - min_data)
 
 print("Loading ground truth...")
-try:
-    # Load ground truth
-    ground_truth_nifti = nib.load(ground_truth_path)
-    ground_truth_raw = ground_truth_nifti.get_fdata()
-    print(f"Ground truth loaded. Shape: {ground_truth_raw.shape}")
-    
-    # Check if ground truth needs to be denormalized
-    # We'll assume ground truth is also normalized in the range [0, 1]
-    ground_truth = denormalize(ground_truth_raw, min_val, max_val, norm_range)
-    print(f"Denormalized ground truth range: [{np.min(ground_truth)}, {np.max(ground_truth)}]")
-    
-    # Get header and affine for saving files later
+# Define the denormalized ground truth path
+denorm_gt_path = os.path.join(results_path, "00008_denormalized_ground_truth.nii.gz")
+
+# Check if the denormalized ground truth file already exists
+if os.path.exists(denorm_gt_path):
+    print(f"Found existing denormalized ground truth at {denorm_gt_path}")
+    ground_truth_nifti = nib.load(denorm_gt_path)
+    ground_truth = ground_truth_nifti.get_fdata()
     affine = ground_truth_nifti.affine
     header = ground_truth_nifti.header
-    
-    # Save denormalized ground truth
-    denorm_gt_nifti = nib.Nifti1Image(ground_truth, affine, header)
-    denorm_gt_path = os.path.join(results_path, "00219_denormalized_ground_truth.nii.gz")
-    nib.save(denorm_gt_nifti, denorm_gt_path)
-    print(f"Saved denormalized ground truth to {denorm_gt_path}")
-    
-except FileNotFoundError:
-    print(f"Error: Ground truth file not found at {ground_truth_path}")
-    print("Please update the path to match your system configuration.")
-    exit(1)
+    print(f"Loaded denormalized ground truth. Shape: {ground_truth.shape}")
+    print(f"Denormalized ground truth range: [{np.min(ground_truth)}, {np.max(ground_truth)}]")
+else:
+    try:
+        # Load ground truth
+        ground_truth_nifti = nib.load(ground_truth_path)
+        ground_truth_raw = ground_truth_nifti.get_fdata()
+        print(f"Ground truth loaded. Shape: {ground_truth_raw.shape}")
+        
+        # Check if ground truth needs to be denormalized
+        # We'll assume ground truth is also normalized in the range [0, 1]
+        ground_truth = denormalize(ground_truth_raw, min_val, max_val, norm_range)
+        print(f"Denormalized ground truth range: [{np.min(ground_truth)}, {np.max(ground_truth)}]")
+        
+        # Get header and affine for saving files later
+        affine = ground_truth_nifti.affine
+        header = ground_truth_nifti.header
+        
+        # Save denormalized ground truth
+        denorm_gt_nifti = nib.Nifti1Image(ground_truth, affine, header)
+        nib.save(denorm_gt_nifti, denorm_gt_path)
+        print(f"Saved denormalized ground truth to {denorm_gt_path}")
+        
+    except FileNotFoundError:
+        print(f"Error: Ground truth file not found at {ground_truth_path}")
+        print("Please update the path to match your system configuration.")
+        exit(1)
 
 print("Loading predictions...")
-try:
-    # Load predictions
-    predictions = np.load(prediction_path)
-    print(f"Predictions loaded. Shape: {predictions.shape}")
+# Define paths for denormalized predictions array and median prediction
+denorm_pred_array_path = os.path.join(results_path, "00008_denormalized_predictions_array.npy")
+median_output_path = os.path.join(results_path, "00008_median_prediction.nii.gz")
+min_path = os.path.join(results_path, "00008_min_prediction.nii.gz")
+max_path = os.path.join(results_path, "00008_max_prediction.nii.gz")
+mean_path = os.path.join(results_path, "00008_mean_prediction.nii.gz")
+
+# Check if denormalized predictions already exist
+if os.path.exists(denorm_pred_array_path) and os.path.exists(median_output_path) and \
+   os.path.exists(min_path) and os.path.exists(max_path) and os.path.exists(mean_path):
+    print(f"Found existing denormalized predictions at {denorm_pred_array_path}")
+    denormalized_predictions = np.load(denorm_pred_array_path)
+    print(f"Loaded denormalized predictions. Shape: {denormalized_predictions.shape}")
     
-    # Denormalize predictions
-    denormalized_predictions = denormalize(predictions, min_val, max_val, norm_range)
-    print(f"Denormalized predictions range: [{np.min(denormalized_predictions)}, {np.max(denormalized_predictions)}]")
+    # Load statistics
+    median_prediction = nib.load(median_output_path).get_fdata()
+    min_prediction = nib.load(min_path).get_fdata()
+    max_prediction = nib.load(max_path).get_fdata()
+    mean_prediction = nib.load(mean_path).get_fdata()
     
-    # Save denormalized predictions array
-    denorm_pred_array_path = os.path.join(results_path, "00219_denormalized_predictions_array.npy")
-    np.save(denorm_pred_array_path, denormalized_predictions)
-    print(f"Saved denormalized predictions array to {denorm_pred_array_path}")
-    
-    # Save individual denormalized prediction samples as nifti files (first 5 samples)
-    num_samples_to_save = min(5, denormalized_predictions.shape[0])
-    for i in range(num_samples_to_save):
-        sample_pred = denormalized_predictions[i]
-        sample_nifti = nib.Nifti1Image(sample_pred, affine, header)
-        sample_path = os.path.join(denorm_pred_path, f"00219_denorm_pred_sample_{i+1}.nii.gz")
-        nib.save(sample_nifti, sample_path)
-        print(f"Saved denormalized prediction sample {i+1} to {sample_path}")
-    
-    # Compute median prediction
-    median_prediction = np.median(denormalized_predictions, axis=0)
+    print(f"Loaded median, min, max, and mean predictions")
     print(f"Median prediction shape: {median_prediction.shape}")
-    
-    # Save median prediction
-    median_nifti = nib.Nifti1Image(median_prediction, affine, header)
-    median_output_path = os.path.join(results_path, "00219_median_prediction.nii.gz")
-    nib.save(median_nifti, median_output_path)
-    print(f"Saved median prediction to {median_output_path}")
-    
-    # Save min, max, mean of the predictions
-    min_prediction = np.min(denormalized_predictions, axis=0)
-    max_prediction = np.max(denormalized_predictions, axis=0)
-    mean_prediction = np.mean(denormalized_predictions, axis=0)
-    
-    min_nifti = nib.Nifti1Image(min_prediction, affine, header)
-    max_nifti = nib.Nifti1Image(max_prediction, affine, header)
-    mean_nifti = nib.Nifti1Image(mean_prediction, affine, header)
-    
-    min_path = os.path.join(results_path, "00219_min_prediction.nii.gz")
-    max_path = os.path.join(results_path, "00219_max_prediction.nii.gz")
-    mean_path = os.path.join(results_path, "00219_mean_prediction.nii.gz")
-    
-    nib.save(min_nifti, min_path)
-    nib.save(max_nifti, max_path)
-    nib.save(mean_nifti, mean_path)
-    
-    print(f"Saved min/max/mean predictions to {results_path}")
-    
-except FileNotFoundError:
-    print(f"Error: Prediction file not found at {prediction_path}")
-    print("Please update the path to match your system configuration.")
-    exit(1)
+    print(f"Denormalized predictions range: [{np.min(denormalized_predictions)}, {np.max(denormalized_predictions)}]")
+else:
+    try:
+        # Load predictions
+        predictions = np.load(prediction_path)
+        print(f"Predictions loaded. Shape: {predictions.shape}")
+        
+        # Denormalize predictions
+        denormalized_predictions = denormalize(predictions, min_val, max_val, norm_range)
+        print(f"Denormalized predictions range: [{np.min(denormalized_predictions)}, {np.max(denormalized_predictions)}]")
+        
+        # Save denormalized predictions array
+        np.save(denorm_pred_array_path, denormalized_predictions)
+        print(f"Saved denormalized predictions array to {denorm_pred_array_path}")
+        
+        # Save individual denormalized prediction samples as nifti files (first 5 samples)
+        num_samples_to_save = min(5, denormalized_predictions.shape[0])
+        for i in range(num_samples_to_save):
+            sample_pred = denormalized_predictions[i]
+            sample_nifti = nib.Nifti1Image(sample_pred, affine, header)
+            sample_path = os.path.join(denorm_pred_path, f"00008_denorm_pred_sample_{i+1}.nii.gz")
+            nib.save(sample_nifti, sample_path)
+            print(f"Saved denormalized prediction sample {i+1} to {sample_path}")
+        
+        # Compute median prediction
+        median_prediction = np.median(denormalized_predictions, axis=0)
+        print(f"Median prediction shape: {median_prediction.shape}")
+        
+        # Save median prediction
+        median_nifti = nib.Nifti1Image(median_prediction, affine, header)
+        nib.save(median_nifti, median_output_path)
+        print(f"Saved median prediction to {median_output_path}")
+        
+        # Save min, max, mean of the predictions
+        min_prediction = np.min(denormalized_predictions, axis=0)
+        max_prediction = np.max(denormalized_predictions, axis=0)
+        mean_prediction = np.mean(denormalized_predictions, axis=0)
+        
+        min_nifti = nib.Nifti1Image(min_prediction, affine, header)
+        max_nifti = nib.Nifti1Image(max_prediction, affine, header)
+        mean_nifti = nib.Nifti1Image(mean_prediction, affine, header)
+        
+        nib.save(min_nifti, min_path)
+        nib.save(max_nifti, max_path)
+        nib.save(mean_nifti, mean_path)
+        
+        print(f"Saved min/max/mean predictions to {results_path}")
+        
+    except FileNotFoundError:
+        print(f"Error: Prediction file not found at {prediction_path}")
+        print("Please update the path to match your system configuration.")
+        exit(1)
 
-# Create mask using threshold and binary fill holes
-print(f"Creating mask using threshold {mask_threshold} and binary fill holes...")
-mask = median_prediction > mask_threshold
-mask = binary_fill_holes(mask).astype(np.float32)
-print(f"Mask created. Number of voxels in mask: {np.sum(mask)}")
-print(f"Mask percentage: {np.sum(mask) / mask.size * 100:.2f}%")
+# Check if mask already exists
+mask_output_path = os.path.join(results_path, "00008_mask.nii.gz")
+if os.path.exists(mask_output_path):
+    print(f"\nFound existing mask at {mask_output_path}")
+    mask_nifti = nib.load(mask_output_path)
+    mask = mask_nifti.get_fdata().astype(np.float32)
+    print(f"Loaded mask. Number of voxels in mask: {np.sum(mask)}")
+    print(f"Mask percentage: {np.sum(mask) / mask.size * 100:.2f}%")
+else:
+    # Create mask using threshold and binary fill holes
+    print(f"Creating mask using threshold {mask_threshold} and binary fill holes...")
+    mask = median_prediction > mask_threshold
+    mask = binary_fill_holes(mask).astype(np.float32)
+    print(f"Mask created. Number of voxels in mask: {np.sum(mask)}")
+    print(f"Mask percentage: {np.sum(mask) / mask.size * 100:.2f}%")
 
-# Save mask
-mask_nifti = nib.Nifti1Image(mask, affine, header)
-mask_output_path = os.path.join(results_path, "00219_mask.nii.gz")
-nib.save(mask_nifti, mask_output_path)
-print(f"Saved mask to {mask_output_path}")
+    # Save mask
+    mask_nifti = nib.Nifti1Image(mask, affine, header)
+    nib.save(mask_nifti, mask_output_path)
+    print(f"Saved mask to {mask_output_path}")
 
-# Compute absolute error within mask
-print("Computing absolute error...")
-abs_error = np.abs(ground_truth - median_prediction)
-abs_error_masked = abs_error * mask  # Apply mask to error
+# Check if absolute error already exists
+abs_error_output_path = os.path.join(results_path, "00008_absolute_error_masked.nii.gz")
+abs_error_unmasked_path = os.path.join(results_path, "00008_absolute_error_unmasked.nii.gz")
 
-# Calculate stats for masked error
-masked_indices = mask > 0
-masked_error_values = abs_error[masked_indices]
-print(f"Absolute error range within mask: [{np.min(masked_error_values)}, {np.max(masked_error_values)}]")
-print(f"Mean absolute error within mask: {np.mean(masked_error_values)}")
-print(f"Median absolute error within mask: {np.median(masked_error_values)}")
+if os.path.exists(abs_error_output_path) and os.path.exists(abs_error_unmasked_path):
+    print(f"\nFound existing absolute error at {abs_error_output_path}")
+    abs_error_masked_nifti = nib.load(abs_error_output_path)
+    abs_error_masked = abs_error_masked_nifti.get_fdata()
+    
+    abs_error_unmasked_nifti = nib.load(abs_error_unmasked_path)
+    abs_error = abs_error_unmasked_nifti.get_fdata()
+    
+    # Calculate stats for masked error
+    masked_indices = mask > 0
+    masked_error_values = abs_error[masked_indices]
+    print(f"Loaded absolute error. Range within mask: [{np.min(masked_error_values)}, {np.max(masked_error_values)}]")
+    print(f"Mean absolute error within mask: {np.mean(masked_error_values)}")
+    print(f"Median absolute error within mask: {np.median(masked_error_values)}")
+else:
+    # Compute absolute error within mask
+    print("Computing absolute error...")
+    abs_error = np.abs(ground_truth - median_prediction)
+    abs_error_masked = abs_error * mask  # Apply mask to error
 
-# Save absolute error (masked)
-abs_error_nifti = nib.Nifti1Image(abs_error_masked, affine, header)
-abs_error_output_path = os.path.join(results_path, "00219_absolute_error_masked.nii.gz")
-nib.save(abs_error_nifti, abs_error_output_path)
-print(f"Saved masked absolute error to {abs_error_output_path}")
+    # Calculate stats for masked error
+    masked_indices = mask > 0
+    masked_error_values = abs_error[masked_indices]
+    print(f"Absolute error range within mask: [{np.min(masked_error_values)}, {np.max(masked_error_values)}]")
+    print(f"Mean absolute error within mask: {np.mean(masked_error_values)}")
+    print(f"Median absolute error within mask: {np.median(masked_error_values)}")
 
-# Also save the unmasked absolute error for reference
-abs_error_unmasked_nifti = nib.Nifti1Image(abs_error, affine, header)
-abs_error_unmasked_path = os.path.join(results_path, "00219_absolute_error_unmasked.nii.gz")
-nib.save(abs_error_unmasked_nifti, abs_error_unmasked_path)
-print(f"Saved unmasked absolute error to {abs_error_unmasked_path}")
+    # Save absolute error (masked)
+    abs_error_nifti = nib.Nifti1Image(abs_error_masked, affine, header)
+    nib.save(abs_error_nifti, abs_error_output_path)
+    print(f"Saved masked absolute error to {abs_error_output_path}")
+
+    # Also save the unmasked absolute error for reference
+    abs_error_unmasked_nifti = nib.Nifti1Image(abs_error, affine, header)
+    nib.save(abs_error_unmasked_nifti, abs_error_unmasked_path)
+    print(f"Saved unmasked absolute error to {abs_error_unmasked_path}")
 
 # List of uncertainty metrics to evaluate
 uncertainty_metrics = [
@@ -182,16 +237,22 @@ metric_statistics = {}
 
 print("\nComputing correlations between absolute error and uncertainty metrics (within mask)...")
 for metric in uncertainty_metrics:
-    metric_file = f"test_00219_xte_{metric}.nii.gz"
+    metric_file = f"test_00008_xte_{metric}.nii.gz"
     metric_path = os.path.join(uncertainty_path, metric_file)
     
-    try:
-        # Load uncertainty metric
-        metric_nifti = nib.load(metric_path)
-        metric_data = metric_nifti.get_fdata()
-        print(f"\nLoaded {metric}. Shape: {metric_data.shape}")
+    # Define paths for normalized metrics
+    norm_metric_path = os.path.join(results_path, f"00008_normalized_{metric}.nii.gz")
+    norm_metric_masked_path = os.path.join(results_path, f"00008_normalized_{metric}_masked.nii.gz")
+    
+    # Check if normalized metrics already exist
+    if os.path.exists(norm_metric_path) and os.path.exists(norm_metric_masked_path):
+        print(f"\nFound existing normalized {metric} at {norm_metric_path}")
+        metric_data = nib.load(metric_path).get_fdata()
+        normalized_metric = nib.load(norm_metric_path).get_fdata()
+        normalized_metric_masked = nib.load(norm_metric_masked_path).get_fdata()
         
-        # Apply mask to metric data
+        # Extract metrics stats
+        masked_indices = mask > 0
         metric_data_masked = metric_data * mask
         
         # Store statistics for the metric
@@ -203,19 +264,6 @@ for metric in uncertainty_metrics:
             'std': np.std(metric_data[masked_indices])
         }
         metric_statistics[metric] = metric_stats
-        
-        # Normalize metric for visualization
-        normalized_metric = normalize_metric(metric_data)
-        normalized_metric_masked = normalized_metric * mask
-        
-        # Save normalized metric for visualization (both masked and unmasked)
-        norm_metric_nifti = nib.Nifti1Image(normalized_metric, affine, header)
-        norm_metric_path = os.path.join(results_path, f"00219_normalized_{metric}.nii.gz")
-        nib.save(norm_metric_nifti, norm_metric_path)
-        
-        norm_metric_masked_nifti = nib.Nifti1Image(normalized_metric_masked, affine, header)
-        norm_metric_masked_path = os.path.join(results_path, f"00219_normalized_{metric}_masked.nii.gz")
-        nib.save(norm_metric_masked_nifti, norm_metric_masked_path)
         
         # Flatten arrays for correlation (only within mask)
         flat_error = masked_error_values
@@ -230,9 +278,54 @@ for metric in uncertainty_metrics:
         
         print(f"{metric} - Pearson correlation: {pearson_corr:.4f} (p={pearson_p:.4e})")
         print(f"{metric} - Spearman correlation: {spearman_corr:.4f} (p={spearman_p:.4e})")
-        
-    except FileNotFoundError:
-        print(f"Warning: {metric} file not found at {metric_path}")
+    
+    else:
+        try:
+            # Load uncertainty metric
+            metric_nifti = nib.load(metric_path)
+            metric_data = metric_nifti.get_fdata()
+            print(f"\nLoaded {metric}. Shape: {metric_data.shape}")
+            
+            # Apply mask to metric data
+            metric_data_masked = metric_data * mask
+            
+            # Store statistics for the metric
+            metric_stats = {
+                'min': np.min(metric_data[masked_indices]),
+                'max': np.max(metric_data[masked_indices]),
+                'mean': np.mean(metric_data[masked_indices]),
+                'median': np.median(metric_data[masked_indices]),
+                'std': np.std(metric_data[masked_indices])
+            }
+            metric_statistics[metric] = metric_stats
+            
+            # Normalize metric for visualization
+            normalized_metric = normalize_metric(metric_data)
+            normalized_metric_masked = normalized_metric * mask
+            
+            # Save normalized metric for visualization (both masked and unmasked)
+            norm_metric_nifti = nib.Nifti1Image(normalized_metric, affine, header)
+            nib.save(norm_metric_nifti, norm_metric_path)
+            
+            norm_metric_masked_nifti = nib.Nifti1Image(normalized_metric_masked, affine, header)
+            nib.save(norm_metric_masked_nifti, norm_metric_masked_path)
+            
+            # Flatten arrays for correlation (only within mask)
+            flat_error = masked_error_values
+            flat_metric = metric_data[masked_indices]
+            
+            # Calculate correlations
+            pearson_corr, pearson_p = pearsonr(flat_error, flat_metric)
+            spearman_corr, spearman_p = spearmanr(flat_error, flat_metric)
+            
+            pearson_correlations[metric] = (pearson_corr, pearson_p)
+            spearman_correlations[metric] = (spearman_corr, spearman_p)
+            
+            print(f"{metric} - Pearson correlation: {pearson_corr:.4f} (p={pearson_p:.4e})")
+            print(f"{metric} - Spearman correlation: {spearman_corr:.4f} (p={spearman_p:.4e})")
+            
+        except FileNotFoundError:
+            print(f"Warning: {metric} file not found at {metric_path}")
 
 # Print summary of correlations
 print("\n" + "="*50)
@@ -362,7 +455,7 @@ with open(simple_csv_path, 'w', newline='') as csvfile:
     
     # Write header with analysis details
     csvwriter.writerow(['Analysis Details'])
-    csvwriter.writerow(['Case', '00219'])
+    csvwriter.writerow(['Case', '00008'])
     csvwriter.writerow(['Normalization Range', f"[{norm_range[0]}, {norm_range[1]}]"])
     csvwriter.writerow(['HU Range', f"[{min_val}, {max_val}]"])
     csvwriter.writerow(['Mask threshold', mask_threshold])
