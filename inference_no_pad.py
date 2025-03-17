@@ -56,10 +56,6 @@ print(f"Using GPU ID: {gpu_id}")
 
 test_dict["eval_file_cnt"] = 0
 test_dict["eval_save_folder"] = "array"
-test_dict["special_cases"] = [
-    # "03773",
-    # "05628",
-]
 test_dict["save_tag"] = ""
 test_dict["stride_division"] = 8
 
@@ -116,7 +112,7 @@ if 'val_list_X' in data_div:
 X_list.sort()  # Sort the list first
 
 # Define the list of cases to process
-to_do_cases = ["00008"]  # Add more case numbers as needed
+to_do_cases = ["00219"]  # Add more case numbers as needed
 print(f"Will process only files containing these case numbers: {to_do_cases}")
 
 # Filter file_list to only include files containing the specified case numbers
