@@ -22,7 +22,7 @@ model_name = "Theseus_v2_181_200_rdp1"
 print(f"Using model: {model_name}")
 
 # Define the list of cases to process
-to_do_cases = ["00219"]  # Add more case numbers as needed
+to_do_cases = ["00008"]  # Add more case numbers as needed
 print(f"Will process only files containing these case numbers: {to_do_cases}")
 
 # Setup dictionaries
@@ -122,7 +122,7 @@ if len(val_list) > 0:
     output_array_path = os.path.join(
         test_dict["save_folder"],
         test_dict["eval_save_folder"],
-        os.path.basename(file_path).replace(".nii.gz", "_array.npy")
+        os.path.basename(file_path).replace(".nii.gz", "_array_no_pad.npy")
     )
     
     # Check if the output array exists
@@ -216,7 +216,7 @@ if len(test_list) > 0:
     output_array_path = os.path.join(
         test_dict["save_folder"],
         test_dict["eval_save_folder"],
-        os.path.basename(file_path).replace(".nii.gz", "_array.npy")
+        os.path.basename(file_path).replace(".nii.gz", "_array_no_pad.npy")
     )
     
     # Check if the output array exists
