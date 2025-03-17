@@ -15,16 +15,20 @@ uncertainty_path = "/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty
 results_path = "/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty_garden/project_dir/Theseus_v2_181_200_rdp1/correlation_results"
 os.makedirs(results_path, exist_ok=True)
 
+# Create a directory for denormalized predictions
+denorm_pred_path = os.path.join(results_path, "denormalized_predictions")
+os.makedirs(denorm_pred_path, exist_ok=True)
+
 # Normalization parameters
 min_val = -1024
 max_val = 2976
-norm_range = [-1, 1]
+norm_range = [0, 1]
 
 # Mask threshold
 mask_threshold = -500  # Threshold for creating the mask
 
-# Function to denormalize data from [-1, 1] to [min_val, max_val]
-def denormalize(data, min_val=-1024, max_val=2976, norm_range=[-1, 1]):
+# Function to denormalize data from [0, 1] to [min_val, max_val]
+def denormalize(data, min_val=-1024, max_val=2976, norm_range=[0, 1]):
     """Denormalize data from norm_range to [min_val, max_val]"""
     norm_min, norm_max = norm_range
     norm_range_width = norm_max - norm_min
@@ -49,7 +53,7 @@ try:
     print(f"Ground truth loaded. Shape: {ground_truth_raw.shape}")
     
     # Check if ground truth needs to be denormalized
-    # We'll assume ground truth is also normalized in the same range [-1, 1]
+    # We'll assume ground truth is also normalized in the range [0, 1]
     ground_truth = denormalize(ground_truth_raw, min_val, max_val, norm_range)
     print(f"Denormalized ground truth range: [{np.min(ground_truth)}, {np.max(ground_truth)}]")
     
@@ -78,6 +82,20 @@ try:
     denormalized_predictions = denormalize(predictions, min_val, max_val, norm_range)
     print(f"Denormalized predictions range: [{np.min(denormalized_predictions)}, {np.max(denormalized_predictions)}]")
     
+    # Save denormalized predictions array
+    denorm_pred_array_path = os.path.join(results_path, "00219_denormalized_predictions_array.npy")
+    np.save(denorm_pred_array_path, denormalized_predictions)
+    print(f"Saved denormalized predictions array to {denorm_pred_array_path}")
+    
+    # Save individual denormalized prediction samples as nifti files (first 5 samples)
+    num_samples_to_save = min(5, denormalized_predictions.shape[0])
+    for i in range(num_samples_to_save):
+        sample_pred = denormalized_predictions[i]
+        sample_nifti = nib.Nifti1Image(sample_pred, affine, header)
+        sample_path = os.path.join(denorm_pred_path, f"00219_denorm_pred_sample_{i+1}.nii.gz")
+        nib.save(sample_nifti, sample_path)
+        print(f"Saved denormalized prediction sample {i+1} to {sample_path}")
+    
     # Compute median prediction
     median_prediction = np.median(denormalized_predictions, axis=0)
     print(f"Median prediction shape: {median_prediction.shape}")
@@ -87,6 +105,25 @@ try:
     median_output_path = os.path.join(results_path, "00219_median_prediction.nii.gz")
     nib.save(median_nifti, median_output_path)
     print(f"Saved median prediction to {median_output_path}")
+    
+    # Save min, max, mean of the predictions
+    min_prediction = np.min(denormalized_predictions, axis=0)
+    max_prediction = np.max(denormalized_predictions, axis=0)
+    mean_prediction = np.mean(denormalized_predictions, axis=0)
+    
+    min_nifti = nib.Nifti1Image(min_prediction, affine, header)
+    max_nifti = nib.Nifti1Image(max_prediction, affine, header)
+    mean_nifti = nib.Nifti1Image(mean_prediction, affine, header)
+    
+    min_path = os.path.join(results_path, "00219_min_prediction.nii.gz")
+    max_path = os.path.join(results_path, "00219_max_prediction.nii.gz")
+    mean_path = os.path.join(results_path, "00219_mean_prediction.nii.gz")
+    
+    nib.save(min_nifti, min_path)
+    nib.save(max_nifti, max_path)
+    nib.save(mean_nifti, mean_path)
+    
+    print(f"Saved min/max/mean predictions to {results_path}")
     
 except FileNotFoundError:
     print(f"Error: Prediction file not found at {prediction_path}")
@@ -123,6 +160,12 @@ abs_error_nifti = nib.Nifti1Image(abs_error_masked, affine, header)
 abs_error_output_path = os.path.join(results_path, "00219_absolute_error_masked.nii.gz")
 nib.save(abs_error_nifti, abs_error_output_path)
 print(f"Saved masked absolute error to {abs_error_output_path}")
+
+# Also save the unmasked absolute error for reference
+abs_error_unmasked_nifti = nib.Nifti1Image(abs_error, affine, header)
+abs_error_unmasked_path = os.path.join(results_path, "00219_absolute_error_unmasked.nii.gz")
+nib.save(abs_error_unmasked_nifti, abs_error_unmasked_path)
+print(f"Saved unmasked absolute error to {abs_error_unmasked_path}")
 
 # List of uncertainty metrics to evaluate
 uncertainty_metrics = [
@@ -233,11 +276,38 @@ plt.grid(True, alpha=0.3)
 plt.savefig(os.path.join(results_path, 'correlation_plot.png'))
 print(f"Saved correlation plot to {os.path.join(results_path, 'correlation_plot.png')}")
 
+# Generate a second plot with absolute correlation values
+plt.figure(figsize=(12, 8))
+abs_pearson_values = [abs(v) for v in pearson_values]
+abs_spearman_values = [abs(v) for v in spearman_values]
+
+# Sort metrics by absolute Spearman correlation
+sorted_indices = np.argsort(abs_spearman_values)[::-1]
+sorted_metrics_abs = [metrics[i] for i in sorted_indices]
+sorted_abs_pearson = [abs_pearson_values[i] for i in sorted_indices]
+sorted_abs_spearman = [abs_spearman_values[i] for i in sorted_indices]
+
+x_abs = np.arange(len(sorted_metrics_abs))
+plt.bar(x_abs - width/2, sorted_abs_pearson, width, label='|Pearson|')
+plt.bar(x_abs + width/2, sorted_abs_spearman, width, label='|Spearman|')
+
+plt.xlabel('Uncertainty Metric')
+plt.ylabel('Absolute Correlation with Error')
+plt.title('Absolute Correlation between Error and Uncertainty Metrics (within mask)')
+plt.xticks(x_abs, sorted_metrics_abs, rotation=45)
+plt.legend()
+plt.tight_layout()
+plt.grid(True, alpha=0.3)
+plt.savefig(os.path.join(results_path, 'abs_correlation_plot.png'))
+print(f"Saved absolute correlation plot to {os.path.join(results_path, 'abs_correlation_plot.png')}")
+
 # Save the correlation results to a text file
 with open(os.path.join(results_path, 'correlation_results.txt'), 'w') as f:
     f.write("CORRELATION BETWEEN ABSOLUTE ERROR AND UNCERTAINTY METRICS (WITHIN MASK)\n")
     f.write("="*70 + "\n\n")
     
+    f.write(f"Normalization Range: [{norm_range[0]}, {norm_range[1]}]\n")
+    f.write(f"HU Range: [{min_val}, {max_val}]\n")
     f.write(f"Mask threshold: {mask_threshold}\n")
     f.write(f"Total voxels in mask: {np.sum(mask)} ({np.sum(mask) / mask.size * 100:.2f}% of volume)\n\n")
     
@@ -270,8 +340,8 @@ with open(csv_file_path, 'w', newline='') as csvfile:
             
             # Add statistics if available
             stats = metric_statistics.get(metric, {})
-            min_val = stats.get('min', float('nan'))
-            max_val = stats.get('max', float('nan'))
+            min_val_metric = stats.get('min', float('nan'))
+            max_val_metric = stats.get('max', float('nan'))
             mean_val = stats.get('mean', float('nan'))
             median_val = stats.get('median', float('nan'))
             std_val = stats.get('std', float('nan'))
@@ -280,7 +350,7 @@ with open(csv_file_path, 'w', newline='') as csvfile:
                 metric, 
                 pearson_corr, pearson_p, 
                 spearman_corr, spearman_p,
-                min_val, max_val, mean_val, median_val, std_val
+                min_val_metric, max_val_metric, mean_val, median_val, std_val
             ])
 
 print(f"Saved correlation results to CSV: {csv_file_path}")
@@ -293,6 +363,8 @@ with open(simple_csv_path, 'w', newline='') as csvfile:
     # Write header with analysis details
     csvwriter.writerow(['Analysis Details'])
     csvwriter.writerow(['Case', '00219'])
+    csvwriter.writerow(['Normalization Range', f"[{norm_range[0]}, {norm_range[1]}]"])
+    csvwriter.writerow(['HU Range', f"[{min_val}, {max_val}]"])
     csvwriter.writerow(['Mask threshold', mask_threshold])
     csvwriter.writerow(['Mask voxel count', int(np.sum(mask))])
     csvwriter.writerow(['Mask percentage', f"{np.sum(mask) / mask.size * 100:.2f}%"])
@@ -300,13 +372,19 @@ with open(simple_csv_path, 'w', newline='') as csvfile:
     csvwriter.writerow([])  # Empty row as separator
     
     # Correlation results
-    csvwriter.writerow(['Metric', 'Pearson', 'Spearman'])
+    csvwriter.writerow(['Metric', 'Pearson', 'Spearman', 'Abs_Pearson', 'Abs_Spearman'])
     
     for metric in sorted_metrics:
         if metric in pearson_correlations and metric in spearman_correlations:
             pearson_corr = pearson_correlations[metric][0]
             spearman_corr = spearman_correlations[metric][0]
-            csvwriter.writerow([metric, f"{pearson_corr:.4f}", f"{spearman_corr:.4f}"])
+            csvwriter.writerow([
+                metric, 
+                f"{pearson_corr:.4f}", 
+                f"{spearman_corr:.4f}",
+                f"{abs(pearson_corr):.4f}",
+                f"{abs(spearman_corr):.4f}"
+            ])
 
 print(f"Saved simplified correlation summary to CSV: {simple_csv_path}")
 
