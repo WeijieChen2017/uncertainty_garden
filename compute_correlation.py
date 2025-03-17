@@ -3,8 +3,11 @@ import numpy as np
 import nibabel as nib
 from scipy.stats import pearsonr, spearmanr
 import matplotlib.pyplot as plt
-from scipy.ndimage import binary_fill_holes
+from scipy.ndimage import binary_fill_holes, binary_dilation, binary_erosion
 import csv
+
+# Flag to control whether to overwrite existing files
+OVERWRITE = False  # Set to True to force recomputation and overwrite existing files
 
 # Paths - using absolute paths as specified in the user query
 ground_truth_path = "/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty_garden/project_dir/Theseus_v2_181_200_rdp1/ground_truth/00008_yte.nii.gz"
@@ -24,8 +27,10 @@ min_val = -1024
 max_val = 2976
 norm_range = [0, 1]
 
-# Mask threshold
+# Mask threshold and processing parameters
 mask_threshold = -500  # Threshold for creating the mask
+dilation_iterations = 3  # Number of iterations for mask dilation
+erosion_iterations = 3   # Number of iterations for mask erosion
 
 # Function to denormalize data from [0, 1] to [min_val, max_val]
 def denormalize(data, min_val=-1024, max_val=2976, norm_range=[0, 1]):
@@ -50,7 +55,7 @@ print("Loading ground truth...")
 denorm_gt_path = os.path.join(results_path, "00008_denormalized_ground_truth.nii.gz")
 
 # Check if the denormalized ground truth file already exists
-if os.path.exists(denorm_gt_path):
+if os.path.exists(denorm_gt_path) and not OVERWRITE:
     print(f"Found existing denormalized ground truth at {denorm_gt_path}")
     ground_truth_nifti = nib.load(denorm_gt_path)
     ground_truth = ground_truth_nifti.get_fdata()
@@ -94,7 +99,7 @@ mean_path = os.path.join(results_path, "00008_mean_prediction.nii.gz")
 
 # Check if denormalized predictions already exist
 if os.path.exists(denorm_pred_array_path) and os.path.exists(median_output_path) and \
-   os.path.exists(min_path) and os.path.exists(max_path) and os.path.exists(mean_path):
+   os.path.exists(min_path) and os.path.exists(max_path) and os.path.exists(mean_path) and not OVERWRITE:
     print(f"Found existing denormalized predictions at {denorm_pred_array_path}")
     denormalized_predictions = np.load(denorm_pred_array_path)
     print(f"Loaded denormalized predictions. Shape: {denormalized_predictions.shape}")
@@ -162,22 +167,38 @@ else:
 
 # Check if mask already exists
 mask_output_path = os.path.join(results_path, "00008_mask.nii.gz")
-if os.path.exists(mask_output_path):
+if os.path.exists(mask_output_path) and not OVERWRITE:
     print(f"\nFound existing mask at {mask_output_path}")
     mask_nifti = nib.load(mask_output_path)
     mask = mask_nifti.get_fdata().astype(np.float32)
     print(f"Loaded mask. Number of voxels in mask: {np.sum(mask)}")
     print(f"Mask percentage: {np.sum(mask) / mask.size * 100:.2f}%")
 else:
-    # Create mask using threshold and binary fill holes
-    print(f"Creating mask using threshold {mask_threshold} and binary fill holes...")
-    mask = median_prediction > mask_threshold
-    mask = binary_fill_holes(mask).astype(np.float32)
-    print(f"Mask created. Number of voxels in mask: {np.sum(mask)}")
-    print(f"Mask percentage: {np.sum(mask) / mask.size * 100:.2f}%")
+    # Create mask using threshold, dilation, erosion, and z-slice binary fill holes
+    print(f"Creating mask using threshold {mask_threshold} with dilation and erosion...")
+    
+    # Initial threshold
+    initial_mask = median_prediction > mask_threshold
+    print(f"Initial thresholding - Number of voxels: {np.sum(initial_mask)}")
+    
+    # Dilate the mask
+    dilated_mask = binary_dilation(initial_mask, iterations=dilation_iterations)
+    print(f"After dilation ({dilation_iterations} iterations) - Number of voxels: {np.sum(dilated_mask)}")
+    
+    # Erode the mask
+    eroded_mask = binary_erosion(dilated_mask, iterations=erosion_iterations)
+    print(f"After erosion ({erosion_iterations} iterations) - Number of voxels: {np.sum(eroded_mask)}")
+    
+    # Apply binary fill holes slice by slice along z-axis
+    mask = np.zeros_like(eroded_mask, dtype=np.float32)
+    for z in range(eroded_mask.shape[2]):
+        mask[:, :, z] = binary_fill_holes(eroded_mask[:, :, z])
+    
+    print(f"After z-slice binary fill holes - Number of voxels: {np.sum(mask)}")
+    print(f"Mask created. Percentage: {np.sum(mask) / mask.size * 100:.2f}%")
 
     # Save mask
-    mask_nifti = nib.Nifti1Image(mask, affine, header)
+    mask_nifti = nib.Nifti1Image(mask.astype(np.float32), affine, header)
     nib.save(mask_nifti, mask_output_path)
     print(f"Saved mask to {mask_output_path}")
 
@@ -185,7 +206,7 @@ else:
 abs_error_output_path = os.path.join(results_path, "00008_absolute_error_masked.nii.gz")
 abs_error_unmasked_path = os.path.join(results_path, "00008_absolute_error_unmasked.nii.gz")
 
-if os.path.exists(abs_error_output_path) and os.path.exists(abs_error_unmasked_path):
+if os.path.exists(abs_error_output_path) and os.path.exists(abs_error_unmasked_path) and not OVERWRITE:
     print(f"\nFound existing absolute error at {abs_error_output_path}")
     abs_error_masked_nifti = nib.load(abs_error_output_path)
     abs_error_masked = abs_error_masked_nifti.get_fdata()
@@ -245,7 +266,7 @@ for metric in uncertainty_metrics:
     norm_metric_masked_path = os.path.join(results_path, f"00008_normalized_{metric}_masked.nii.gz")
     
     # Check if normalized metrics already exist
-    if os.path.exists(norm_metric_path) and os.path.exists(norm_metric_masked_path):
+    if os.path.exists(norm_metric_path) and os.path.exists(norm_metric_masked_path) and not OVERWRITE:
         print(f"\nFound existing normalized {metric} at {norm_metric_path}")
         metric_data = nib.load(metric_path).get_fdata()
         normalized_metric = nib.load(norm_metric_path).get_fdata()
