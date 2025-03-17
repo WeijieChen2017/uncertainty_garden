@@ -39,7 +39,7 @@ os.makedirs(uncertainty_save_path, exist_ok=True)
 # Define normalization parameters
 min_val = -1024
 max_val = 2976
-norm_range = [-1, 1]
+norm_range = [0, 1]
 
 # Function to denormalize data from [-1, 1] to [min_val, max_val]
 def denormalize(data, min_val=-1024, max_val=2976, norm_range=[0, 1]):
