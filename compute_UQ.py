@@ -37,8 +37,8 @@ uncertainty_save_path = os.path.join(test_dict["save_folder"], test_dict["uncert
 os.makedirs(uncertainty_save_path, exist_ok=True)
 
 # Define normalization parameters
-min_val = -1024
-max_val = 2976
+min_val = -1000
+max_val = 3000
 norm_range = [0, 1]
 
 # Function to denormalize data from [-1, 1] to [min_val, max_val]
