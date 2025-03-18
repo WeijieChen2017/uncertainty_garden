@@ -9,9 +9,11 @@ import csv
 # Flag to control whether to overwrite existing files
 OVERWRITE = True  # Set to True to force recomputation and overwrite existing files
 
+case_key = "00219"
+
 # Paths - using absolute paths as specified in the user query
-ground_truth_path = "/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty_garden/project_dir/Theseus_v2_181_200_rdp1/ground_truth/00008_yte.nii.gz"
-prediction_path = "/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty_garden/project_dir/Theseus_v2_181_200_rdp1/array/00008_xte_array.npy"
+ground_truth_path = f"/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty_garden/project_dir/Theseus_v2_181_200_rdp1/ground_truth/{case_key}_yte.nii.gz"
+prediction_path = f"/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty_garden/project_dir/Theseus_v2_181_200_rdp1/array/{case_key}_xte_array.npy"
 uncertainty_path = "/shares/mimrtl/Users/Winston/files_to_dgx/SUREMI/uncertainty_garden/project_dir/Theseus_v2_181_200_rdp1/uncertainty"
 
 # Ensure results directory exists
@@ -52,7 +54,7 @@ def normalize_metric(data):
 
 print("Loading ground truth...")
 # Define the denormalized ground truth path
-denorm_gt_path = os.path.join(results_path, "00008_denormalized_ground_truth.nii.gz")
+denorm_gt_path = os.path.join(results_path, f"{case_key}_denormalized_ground_truth.nii.gz")
 
 # Check if the denormalized ground truth file already exists
 if os.path.exists(denorm_gt_path) and not OVERWRITE:
@@ -91,11 +93,11 @@ else:
 
 print("Loading predictions...")
 # Define paths for denormalized predictions array and median prediction
-denorm_pred_array_path = os.path.join(results_path, "00008_denormalized_predictions_array.npy")
-median_output_path = os.path.join(results_path, "00008_median_prediction.nii.gz")
-min_path = os.path.join(results_path, "00008_min_prediction.nii.gz")
-max_path = os.path.join(results_path, "00008_max_prediction.nii.gz")
-mean_path = os.path.join(results_path, "00008_mean_prediction.nii.gz")
+denorm_pred_array_path = os.path.join(results_path, f"{case_key}_denormalized_predictions_array.npy")
+median_output_path = os.path.join(results_path, f"{case_key}_median_prediction.nii.gz")
+min_path = os.path.join(results_path, f"{case_key}_min_prediction.nii.gz")
+max_path = os.path.join(results_path, f"{case_key}_max_prediction.nii.gz")
+mean_path = os.path.join(results_path, f"{case_key}_mean_prediction.nii.gz")
 
 # Check if denormalized predictions already exist
 if os.path.exists(denorm_pred_array_path) and os.path.exists(median_output_path) and \
@@ -132,7 +134,7 @@ else:
         for i in range(num_samples_to_save):
             sample_pred = denormalized_predictions[i]
             sample_nifti = nib.Nifti1Image(sample_pred, affine, header)
-            sample_path = os.path.join(denorm_pred_path, f"00008_denorm_pred_sample_{i+1}.nii.gz")
+            sample_path = os.path.join(denorm_pred_path, ff"{case_key}_denorm_pred_sample_{i+1}.nii.gz")
             nib.save(sample_nifti, sample_path)
             print(f"Saved denormalized prediction sample {i+1} to {sample_path}")
         
@@ -166,7 +168,7 @@ else:
         exit(1)
 
 # Check if mask already exists
-mask_output_path = os.path.join(results_path, "00008_mask.nii.gz")
+mask_output_path = os.path.join(results_path, f"{case_key}_mask.nii.gz")
 if os.path.exists(mask_output_path) and not OVERWRITE:
     print(f"\nFound existing mask at {mask_output_path}")
     mask_nifti = nib.load(mask_output_path)
@@ -203,8 +205,8 @@ else:
     print(f"Saved mask to {mask_output_path}")
 
 # Check if absolute error already exists
-abs_error_output_path = os.path.join(results_path, "00008_absolute_error_masked.nii.gz")
-abs_error_unmasked_path = os.path.join(results_path, "00008_absolute_error_unmasked.nii.gz")
+abs_error_output_path = os.path.join(results_path, f"{case_key}_absolute_error_masked.nii.gz")
+abs_error_unmasked_path = os.path.join(results_path, f"{case_key}_absolute_error_unmasked.nii.gz")
 
 if os.path.exists(abs_error_output_path) and os.path.exists(abs_error_unmasked_path) and not OVERWRITE:
     print(f"\nFound existing absolute error at {abs_error_output_path}")
@@ -258,12 +260,12 @@ metric_statistics = {}
 
 print("\nComputing correlations between absolute error and uncertainty metrics (within mask)...")
 for metric in uncertainty_metrics:
-    metric_file = f"test_00008_xte_{metric}.nii.gz"
+    metric_file = f"test_{case_key}_xte_{metric}.nii.gz"
     metric_path = os.path.join(uncertainty_path, metric_file)
     
     # Define paths for normalized metrics
-    norm_metric_path = os.path.join(results_path, f"00008_normalized_{metric}.nii.gz")
-    norm_metric_masked_path = os.path.join(results_path, f"00008_normalized_{metric}_masked.nii.gz")
+    norm_metric_path = os.path.join(results_path, ff"{case_key}_normalized_{metric}.nii.gz")
+    norm_metric_masked_path = os.path.join(results_path, ff"{case_key}_normalized_{metric}_masked.nii.gz")
     
     # Check if normalized metrics already exist
     if os.path.exists(norm_metric_path) and os.path.exists(norm_metric_masked_path) and not OVERWRITE:
@@ -387,8 +389,8 @@ plt.xticks(x, metrics, rotation=45)
 plt.legend()
 plt.tight_layout()
 plt.grid(True, alpha=0.3)
-plt.savefig(os.path.join(results_path, 'correlation_plot.png'))
-print(f"Saved correlation plot to {os.path.join(results_path, 'correlation_plot.png')}")
+plt.savefig(os.path.join(results_path, f'{case_key}_correlation_plot.png'))
+print(f"Saved correlation plot to {os.path.join(results_path, f'{case_key}_correlation_plot.png')}")
 
 # Generate a second plot with absolute correlation values
 plt.figure(figsize=(12, 8))
@@ -412,11 +414,11 @@ plt.xticks(x_abs, sorted_metrics_abs, rotation=45)
 plt.legend()
 plt.tight_layout()
 plt.grid(True, alpha=0.3)
-plt.savefig(os.path.join(results_path, 'abs_correlation_plot.png'))
-print(f"Saved absolute correlation plot to {os.path.join(results_path, 'abs_correlation_plot.png')}")
+plt.savefig(os.path.join(results_path, f'{case_key}_abs_correlation_plot.png'))
+print(f"Saved absolute correlation plot to {os.path.join(results_path, f'{case_key}_abs_correlation_plot.png')}")
 
 # Save the correlation results to a text file
-with open(os.path.join(results_path, 'correlation_results.txt'), 'w') as f:
+with open(os.path.join(results_path, f'{case_key}_correlation_results.txt'), 'w') as f:
     f.write("CORRELATION BETWEEN ABSOLUTE ERROR AND UNCERTAINTY METRICS (WITHIN MASK)\n")
     f.write("="*70 + "\n\n")
     
@@ -438,7 +440,7 @@ with open(os.path.join(results_path, 'correlation_results.txt'), 'w') as f:
     f.write("Analysis completed on: " + np.datetime64('now').astype(str) + "\n")
 
 # Save the correlation results to a CSV file
-csv_file_path = os.path.join(results_path, 'correlation_results.csv')
+csv_file_path = os.path.join(results_path, f'{case_key}_correlation_results.csv')
 with open(csv_file_path, 'w', newline='') as csvfile:
     csvwriter = csv.writer(csvfile)
     
@@ -470,13 +472,13 @@ with open(csv_file_path, 'w', newline='') as csvfile:
 print(f"Saved correlation results to CSV: {csv_file_path}")
 
 # Create a second CSV with simplified format for easier analysis
-simple_csv_path = os.path.join(results_path, 'correlation_summary.csv')
+simple_csv_path = os.path.join(results_path, f'{case_key}_correlation_summary.csv')
 with open(simple_csv_path, 'w', newline='') as csvfile:
     csvwriter = csv.writer(csvfile)
     
     # Write header with analysis details
     csvwriter.writerow(['Analysis Details'])
-    csvwriter.writerow(['Case', '00008'])
+    csvwriter.writerow(['Case', f'{case_key}'])
     csvwriter.writerow(['Normalization Range', f"[{norm_range[0]}, {norm_range[1]}]"])
     csvwriter.writerow(['HU Range', f"[{min_val}, {max_val}]"])
     csvwriter.writerow(['Mask threshold', mask_threshold])
