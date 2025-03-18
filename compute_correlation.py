@@ -25,8 +25,8 @@ denorm_pred_path = os.path.join(results_path, "denormalized_predictions")
 os.makedirs(denorm_pred_path, exist_ok=True)
 
 # Normalization parameters
-min_val = -1024
-max_val = 2976
+min_val = -1000
+max_val = 3000
 norm_range = [0, 1]
 
 # Mask threshold and processing parameters
