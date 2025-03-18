@@ -134,7 +134,7 @@ else:
         for i in range(num_samples_to_save):
             sample_pred = denormalized_predictions[i]
             sample_nifti = nib.Nifti1Image(sample_pred, affine, header)
-            sample_path = os.path.join(denorm_pred_path, ff"{case_key}_denorm_pred_sample_{i+1}.nii.gz")
+            sample_path = os.path.join(denorm_pred_path, f"{case_key}_denorm_pred_sample_{i+1}.nii.gz")
             nib.save(sample_nifti, sample_path)
             print(f"Saved denormalized prediction sample {i+1} to {sample_path}")
         
@@ -264,8 +264,8 @@ for metric in uncertainty_metrics:
     metric_path = os.path.join(uncertainty_path, metric_file)
     
     # Define paths for normalized metrics
-    norm_metric_path = os.path.join(results_path, ff"{case_key}_normalized_{metric}.nii.gz")
-    norm_metric_masked_path = os.path.join(results_path, ff"{case_key}_normalized_{metric}_masked.nii.gz")
+    norm_metric_path = os.path.join(results_path, f"{case_key}_normalized_{metric}.nii.gz")
+    norm_metric_masked_path = os.path.join(results_path, f"{case_key}_normalized_{metric}_masked.nii.gz")
     
     # Check if normalized metrics already exist
     if os.path.exists(norm_metric_path) and os.path.exists(norm_metric_masked_path) and not OVERWRITE:
