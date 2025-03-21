@@ -28,21 +28,27 @@ def plot_heatmap(csv_path, save_path):
     # Create figure with larger size
     plt.figure(figsize=(12, 10))
     
-    # Create heatmap without annotations
+    # Create heatmap without annotations and without text
     sns.heatmap(df.iloc[:, 1:],  # Skip the first column (row labels)
                 annot=False,  # Don't show values in cells
-                cmap='viridis',  # Use viridis colormap
-                cbar_kws={'label': 'MAE Loss'},  # Add label to colorbar
-                square=True)  # Make cells square
+                cmap='viridis_r',  # Use reversed viridis colormap
+                cbar_kws={'label': ''},  # No colorbar label
+                square=True,  # Make cells square
+                xticklabels=False,  # No x-axis labels
+                yticklabels=False)  # No y-axis labels
     
-    # Customize the plot
-    plt.title(f'MAE Loss Heatmap - Case {case_key}', pad=20)
-    plt.xlabel('Predictions and Ground Truth')
-    plt.ylabel('Predictions and Ground Truth')
+    # Remove title
+    plt.title('')
+    
+    # Remove axis labels
+    plt.xlabel('')
+    plt.ylabel('')
+    
+    # Adjust layout to remove extra space
     plt.tight_layout()
     
     # Save the plot
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.savefig(save_path, dpi=300, bbox_inches='tight', pad_inches=0)
     print(f"Saved heatmap to {save_path}")
     plt.close()
 
