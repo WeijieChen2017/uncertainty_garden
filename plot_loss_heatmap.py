@@ -35,7 +35,9 @@ def plot_heatmap(csv_path, save_path):
                 cbar_kws={'label': ''},  # No colorbar label
                 square=True,  # Make cells square
                 xticklabels=False,  # No x-axis labels
-                yticklabels=False)  # No y-axis labels
+                yticklabels=False,  # No y-axis labels
+                vmin=0,  # Set minimum value to 0
+                vmax=0.1)  # Set maximum value to 0.1
     
     # Remove title
     plt.title('')
