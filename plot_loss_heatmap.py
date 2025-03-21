@@ -31,7 +31,7 @@ def plot_heatmap(csv_path, save_path):
     # Create heatmap without annotations
     sns.heatmap(df.iloc[:, 1:],  # Skip the first column (row labels)
                 annot=False,  # Don't show values in cells
-                cmap='YlOrRd',  # Use yellow-orange-red colormap
+                cmap='viridis',  # Use viridis colormap
                 cbar_kws={'label': 'MAE Loss'},  # Add label to colorbar
                 square=True)  # Make cells square
     
