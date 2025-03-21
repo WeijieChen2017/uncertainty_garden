@@ -28,10 +28,9 @@ def plot_heatmap(csv_path, save_path):
     # Create figure with larger size
     plt.figure(figsize=(12, 10))
     
-    # Create heatmap
+    # Create heatmap without annotations
     sns.heatmap(df.iloc[:, 1:],  # Skip the first column (row labels)
-                annot=True,  # Show values in cells
-                fmt='.4f',   # Format values to 4 decimal places
+                annot=False,  # Don't show values in cells
                 cmap='YlOrRd',  # Use yellow-orange-red colormap
                 cbar_kws={'label': 'MAE Loss'},  # Add label to colorbar
                 square=True)  # Make cells square
