@@ -48,12 +48,12 @@ def plot_bar(csv_path, save_path):
     # Create bar plot with custom colors and edges
     bars = plt.bar(range(len(all_means)), all_means, edgecolor='black', linewidth=1)
     
-    # Set colors: yellow for predictions, blue for ground truth
+    # Set colors: yellow for predictions, specified RGB for ground truth
     for i, bar in enumerate(bars):
         if i < n_pred:
             bar.set_color('#FFD700')  # Decent yellow for predictions
         else:
-            bar.set_color('#1E90FF')  # Blue for ground truth
+            bar.set_color('#3B4887')  # RGB(59, 72, 135) for ground truth
     
     # Set y-axis label and ticks
     plt.ylabel('Mean MAE')
