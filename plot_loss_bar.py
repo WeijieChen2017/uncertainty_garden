@@ -45,33 +45,23 @@ def plot_bar(csv_path, save_path):
     # Create figure
     plt.figure(figsize=(12, 6))
     
-    # Create bar plot
-    bars = plt.bar(range(len(all_means)), all_means)
+    # Create bar plot with default colors
+    plt.bar(range(len(all_means)), all_means)
     
-    # Apply colors based on values using the same colormap and range as heatmap
-    norm = plt.Normalize(0, 0.1)
-    colors = plt.cm.viridis_r(norm(all_means))
-    for bar, color in zip(bars, colors):
-        bar.set_color(color)
+    # Set axis labels and ticks
+    plt.xlabel('Prediction Index')
+    plt.ylabel('Mean MAE')
+    plt.xticks(range(len(all_means)))
+    plt.yticks(np.arange(0, 0.11, 0.02))  # Ticks from 0 to 0.1 with step 0.02
     
-    # Remove all text elements
-    plt.xticks([])
-    plt.yticks([])
-    plt.title('')
-    plt.xlabel('')
-    plt.ylabel('')
-    
-    # Set the same range as heatmap
+    # Set the range
     plt.ylim(0, 0.1)
     
-    # Remove frame
-    plt.box(False)
-    
-    # Adjust layout to remove extra space
+    # Adjust layout
     plt.tight_layout()
     
     # Save the plot
-    plt.savefig(save_path, dpi=300, bbox_inches='tight', pad_inches=0)
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
     print(f"Saved bar plot to {save_path}")
     plt.close()
 
