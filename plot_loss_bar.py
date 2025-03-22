@@ -48,8 +48,9 @@ def plot_bar(csv_path, save_path):
     # Create bar plot
     bars = plt.bar(range(len(all_means)), all_means)
     
-    # Apply the same colormap as heatmap
-    colors = plt.cm.viridis_r(np.linspace(0, 1, len(all_means)))
+    # Apply colors based on values using the same colormap and range as heatmap
+    norm = plt.Normalize(0, 0.1)
+    colors = plt.cm.viridis_r(norm(all_means))
     for bar, color in zip(bars, colors):
         bar.set_color(color)
     
