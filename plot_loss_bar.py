@@ -45,8 +45,8 @@ def plot_bar(csv_path, save_path):
     # Create figure
     plt.figure(figsize=(12, 6))
     
-    # Create bar plot with custom colors
-    bars = plt.bar(range(len(all_means)), all_means)
+    # Create bar plot with custom colors and edges
+    bars = plt.bar(range(len(all_means)), all_means, edgecolor='black', linewidth=1)
     
     # Set colors: yellow for predictions, blue for ground truth
     for i, bar in enumerate(bars):
@@ -65,6 +65,9 @@ def plot_bar(csv_path, save_path):
     
     # Set the range
     plt.ylim(0, 0.1)
+    
+    # Remove gaps at the edges
+    plt.xlim(-0.5, len(all_means)-0.5)
     
     # Make the plot tight
     plt.tight_layout()
