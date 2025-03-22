@@ -45,23 +45,32 @@ def plot_bar(csv_path, save_path):
     # Create figure
     plt.figure(figsize=(12, 6))
     
-    # Create bar plot with default colors
-    plt.bar(range(len(all_means)), all_means)
+    # Create bar plot with custom colors
+    bars = plt.bar(range(len(all_means)), all_means)
     
-    # Set axis labels and ticks
-    plt.xlabel('Prediction Index')
+    # Set colors: yellow for predictions, blue for ground truth
+    for i, bar in enumerate(bars):
+        if i < n_pred:
+            bar.set_color('#FFD700')  # Decent yellow for predictions
+        else:
+            bar.set_color('#1E90FF')  # Blue for ground truth
+    
+    # Set y-axis label and ticks
     plt.ylabel('Mean MAE')
-    plt.xticks(range(len(all_means)))
     plt.yticks(np.arange(0, 0.11, 0.02))  # Ticks from 0 to 0.1 with step 0.02
+    
+    # Remove x-axis labels and ticks
+    plt.xticks([])
+    plt.xlabel('')
     
     # Set the range
     plt.ylim(0, 0.1)
     
-    # Adjust layout
+    # Make the plot tight
     plt.tight_layout()
     
-    # Save the plot
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    # Save the plot with no extra padding
+    plt.savefig(save_path, dpi=300, bbox_inches='tight', pad_inches=0)
     print(f"Saved bar plot to {save_path}")
     plt.close()
 
